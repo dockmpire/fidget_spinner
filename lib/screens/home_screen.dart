@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import '../constants.dart';
+import '../models/fidget_definition.dart';
+import '../models/fidget_registry.dart';
 import '../services/storage_service.dart';
-import '../widgets/spinner_fidget.dart';
 import '../widgets/stat_card.dart';
 import 'settings_screen.dart';
 
@@ -19,6 +20,7 @@ class _FidgetHomeScreenState extends State<FidgetHomeScreen> {
   int _longestSpin = 0;
   double _sensitivity = 1.0;
   int _hapticIntensity = 3;
+  int _activeFidgetIndex = 0;
 
   @override
   void initState() {
@@ -74,12 +76,14 @@ class _FidgetHomeScreenState extends State<FidgetHomeScreen> {
                   // Fidget display
                   Expanded(
                     child: Center(
-                      child: SpinnerFidget(
-                        sensitivity: _sensitivity,
-                        hapticIntensity: _hapticIntensity,
-                        onSpinStart: () {},
-                        onSpinEnd: _onSpinEnd,
-                        onHapticPulse: _onHapticPulse,
+                      child: FidgetRegistry.all[_activeFidgetIndex].builder(
+                        FidgetCallbacks(
+                          onInteractionStart: () {},
+                          onInteractionEnd: _onSpinEnd,
+                          onHapticPulse: _onHapticPulse,
+                          sensitivity: _sensitivity,
+                          hapticIntensity: _hapticIntensity,
+                        ),
                       ),
                     ),
                   ),

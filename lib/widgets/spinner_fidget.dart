@@ -3,22 +3,12 @@ import 'package:flutter/services.dart';
 import 'dart:async';
 import 'dart:math';
 import '../constants.dart';
+import '../models/fidget_definition.dart';
 
 class SpinnerFidget extends StatefulWidget {
-  final VoidCallback onSpinStart;
-  final Function(int) onSpinEnd;
-  final VoidCallback onHapticPulse;
-  final double sensitivity;
-  final int hapticIntensity; // 0=off, 1=light, 2=medium, 3=heavy
+  final FidgetCallbacks callbacks;
 
-  const SpinnerFidget({
-    super.key,
-    required this.onSpinStart,
-    required this.onSpinEnd,
-    required this.onHapticPulse,
-    this.sensitivity = 1.0,
-    this.hapticIntensity = 3,
-  });
+  const SpinnerFidget({super.key, required this.callbacks});
 
   @override
   State<SpinnerFidget> createState() => _SpinnerFidgetState();
@@ -37,10 +27,11 @@ class _SpinnerFidgetState extends State<SpinnerFidget> {
   static const double _swipeMultiplier = kSwipeMultiplier;
   static const double _hapticTriggerThreshold = kHapticTriggerThreshold;
 
-  void _triggerHaptic({bool isHeavy = false}) {
-    if (widget.hapticIntensity == 0) return; // Haptics off
-    
-    switch (widget.hapticIntensity) {
+  void _triggerHaptic() {
+    final intensity = widget.callbacks.hapticIntensity;
+    if (intensity == 0) return;
+
+    switch (intensity) {
       case 1:
         HapticFeedback.lightImpact();
         break;
@@ -52,13 +43,14 @@ class _SpinnerFidgetState extends State<SpinnerFidget> {
         HapticFeedback.heavyImpact();
         break;
     }
-    widget.onHapticPulse();
+    widget.callbacks.onHapticPulse();
   }
 
   void _triggerLightHaptic() {
-    if (widget.hapticIntensity == 0) return;
-    
-    if (widget.hapticIntensity >= 2) {
+    final intensity = widget.callbacks.hapticIntensity;
+    if (intensity == 0) return;
+
+    if (intensity >= 2) {
       HapticFeedback.mediumImpact();
     } else {
       HapticFeedback.lightImpact();
@@ -66,18 +58,18 @@ class _SpinnerFidgetState extends State<SpinnerFidget> {
   }
 
   void _startSpin(double velocity) {
-    widget.onSpinStart();
+    widget.callbacks.onInteractionStart();
     _spinStartTime = DateTime.now().millisecondsSinceEpoch;
     _currentVelocity = velocity;
     _decayTimer?.cancel();
 
-    _triggerHaptic(isHeavy: true);
+    _triggerHaptic();
 
     _decayTimer = Timer.periodic(_decayInterval, (_) {
       if (_currentVelocity.abs() < _velocityThreshold) {
         _decayTimer?.cancel();
         int spinDuration = (DateTime.now().millisecondsSinceEpoch - _spinStartTime) ~/ 1000;
-        widget.onSpinEnd(spinDuration);
+        widget.callbacks.onInteractionEnd(spinDuration);
         _stopSpin();
         return;
       }
@@ -95,7 +87,7 @@ class _SpinnerFidgetState extends State<SpinnerFidget> {
 
           if (distance < _hapticTriggerThreshold && 
               (_lastHapticPosition - normalizedRotation).abs() > 0.1) {
-            _triggerHaptic(isHeavy: true);
+            _triggerHaptic();
             _lastHapticPosition = normalizedRotation;
             break;
           }
@@ -119,7 +111,7 @@ class _SpinnerFidgetState extends State<SpinnerFidget> {
   void _onPanEnd(DragEndDetails details) {
     double swipeVelocity = details.velocity.pixelsPerSecond.distance;
     // Apply sensitivity modifier
-    double adjustedVelocity = swipeVelocity * _swipeMultiplier * widget.sensitivity;
+    double adjustedVelocity = swipeVelocity * _swipeMultiplier * widget.callbacks.sensitivity;
     double spinVelocity = adjustedVelocity.clamp(kMinVelocity, kMaxVelocity);
     
     _startSpin(spinVelocity);
