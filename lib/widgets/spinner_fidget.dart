@@ -68,7 +68,8 @@ class _SpinnerFidgetState extends State<SpinnerFidget> {
     _decayTimer = Timer.periodic(_decayInterval, (_) {
       if (_currentVelocity.abs() < _velocityThreshold) {
         _decayTimer?.cancel();
-        int spinDuration = (DateTime.now().millisecondsSinceEpoch - _spinStartTime) ~/ 1000;
+        final spinDuration =
+            (DateTime.now().millisecondsSinceEpoch - _spinStartTime) ~/ 1000;
         widget.callbacks.onInteractionEnd(spinDuration);
         _stopSpin();
         return;
@@ -78,14 +79,14 @@ class _SpinnerFidgetState extends State<SpinnerFidget> {
         _currentVelocity *= _friction;
         _totalRotation += _currentVelocity * 0.01;
 
-        double normalizedRotation = _totalRotation % 1.0;
-        List<double> bearingPositions = [0.0, 1/3, 2/3];
+        final normalizedRotation = _totalRotation % 1.0;
+        const bearingPositions = [0.0, 1 / 3, 2 / 3];
 
-        for (double bearingPos in bearingPositions) {
+        for (final bearingPos in bearingPositions) {
           double distance = (normalizedRotation - bearingPos).abs();
           if (distance > 0.5) distance = 1.0 - distance;
 
-          if (distance < _hapticTriggerThreshold && 
+          if (distance < _hapticTriggerThreshold &&
               (_lastHapticPosition - normalizedRotation).abs() > 0.1) {
             _triggerHaptic();
             _lastHapticPosition = normalizedRotation;
@@ -93,7 +94,7 @@ class _SpinnerFidgetState extends State<SpinnerFidget> {
           }
         }
 
-        if ((_totalRotation * 10).toInt() % 2 == 0 && 
+        if ((_totalRotation * 10).toInt() % 2 == 0 &&
             (_lastHapticPosition - normalizedRotation).abs() < 0.05) {
           if (_currentVelocity.abs() > 0.5) {
             _triggerLightHaptic();
@@ -109,25 +110,29 @@ class _SpinnerFidgetState extends State<SpinnerFidget> {
   }
 
   void _onPanEnd(DragEndDetails details) {
-    double swipeVelocity = details.velocity.pixelsPerSecond.distance;
-    // Apply sensitivity modifier
-    double adjustedVelocity = swipeVelocity * _swipeMultiplier * widget.callbacks.sensitivity;
-    double spinVelocity = adjustedVelocity.clamp(kMinVelocity, kMaxVelocity);
-    
+    final swipeVelocity = details.velocity.pixelsPerSecond.distance;
+    final adjustedVelocity =
+        swipeVelocity * _swipeMultiplier * widget.callbacks.sensitivity;
+    final spinVelocity = adjustedVelocity.clamp(kMinVelocity, kMaxVelocity);
     _startSpin(spinVelocity);
   }
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onPanEnd: _onPanEnd,
-      child: Transform.rotate(
-        angle: _totalRotation * 2 * pi,
-        child: CustomPaint(
-          size: const Size(kSpinnerSize, kSpinnerSize),
-          painter: LuxeSpinnerPainter(),
-        ),
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final size = min(constraints.maxWidth, constraints.maxHeight) * 0.82;
+        return GestureDetector(
+          onPanEnd: _onPanEnd,
+          child: Transform.rotate(
+            angle: _totalRotation * 2 * pi,
+            child: CustomPaint(
+              size: Size(size, size),
+              painter: LuxeSpinnerPainter(),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -142,55 +147,120 @@ class LuxeSpinnerPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.width / 2;
+    final r = min(size.width, size.height) / 2;
 
-    // Outer circle gradient - cyan accent
-    final outerPaint = Paint()
-      ..shader = const RadialGradient(
-        colors: [kAccent, kAccentMuted],
-      ).createShader(Rect.fromCircle(center: center, radius: radius))
-      ..style = PaintingStyle.fill;
+    // Dimensions derived from radius
+    final tipR = r * 0.20;       // outer bearing radius
+    final hubR = r * 0.16;       // center hub radius
+    final armW = r * 0.26;       // arm thickness
+    final armStart = hubR * 0.5; // arm starts inside hub (overlap)
+    final armEnd = r - tipR * 1.4; // arm ends before bearing center
 
-    canvas.drawCircle(center, radius, outerPaint);
-
-    // Three bearing balls - white with subtle glow
-    const ballRadius = kBallRadius;
-    final ballDistance = radius - 20;
-    
+    // ── Arms ────────────────────────────────────────────────────────────────
     for (int i = 0; i < 3; i++) {
-      final angle = (i * 2 * pi / 3);
-      final ballX = center.dx + (ballDistance * cos(angle));
-      final ballY = center.dy + (ballDistance * sin(angle));
-      
-      // Ball glow
-      final glowPaint = Paint()
-        ..color = kAccent.withValues(alpha: 0.3)
-        ..style = PaintingStyle.fill;
-      
-      canvas.drawCircle(Offset(ballX, ballY), ballRadius + 4, glowPaint);
-      
-      // Ball itself
-      final ballPaint = Paint()
-        ..color = Colors.white
-        ..style = PaintingStyle.fill;
-      
-      canvas.drawCircle(Offset(ballX, ballY), ballRadius, ballPaint);
+      final angle = i * 2 * pi / 3;
+
+      canvas.save();
+      canvas.translate(center.dx, center.dy);
+      canvas.rotate(angle);
+
+      final armRect = RRect.fromRectAndRadius(
+        Rect.fromLTWH(armStart, -armW / 2, armEnd - armStart, armW),
+        Radius.circular(armW / 2),
+      );
+
+      // Arm gradient (along the arm axis)
+      final armPaint = Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+          colors: [
+            kAccent.withValues(alpha: 0.9),
+            kAccentMuted,
+          ],
+        ).createShader(Rect.fromLTWH(armStart, -armW / 2, armEnd, armW));
+
+      canvas.drawRRect(armRect, armPaint);
+      canvas.restore();
     }
 
-    // Center bearing
-    final centerPaint = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.fill;
+    // ── Tip bearings ─────────────────────────────────────────────────────────
+    for (int i = 0; i < 3; i++) {
+      final angle = i * 2 * pi / 3;
+      final tip = Offset(
+        center.dx + (r - tipR) * cos(angle),
+        center.dy + (r - tipR) * sin(angle),
+      );
 
-    canvas.drawCircle(center, kCenterBearingRadius, centerPaint);
+      // Glow
+      canvas.drawCircle(
+        tip,
+        tipR + 8,
+        Paint()
+          ..color = kAccent.withValues(alpha: 0.18)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8),
+      );
 
-    // Center circle rim - cyan
-    final rimPaint = Paint()
-      ..color = kAccent
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2;
+      // Ball base
+      canvas.drawCircle(tip, tipR, Paint()..color = Colors.white);
 
-    canvas.drawCircle(center, kCenterBearingRadius, rimPaint);
+      // Ball sheen (subtle gradient overlay)
+      canvas.drawCircle(
+        tip,
+        tipR,
+        Paint()
+          ..shader = RadialGradient(
+            center: const Alignment(-0.3, -0.4),
+            radius: 0.9,
+            colors: [
+              Colors.white,
+              const Color(0xFFB8EEFF),
+            ],
+          ).createShader(Rect.fromCircle(center: tip, radius: tipR)),
+      );
+
+      // Specular highlight
+      canvas.drawCircle(
+        Offset(tip.dx - tipR * 0.28, tip.dy - tipR * 0.28),
+        tipR * 0.28,
+        Paint()..color = Colors.white.withValues(alpha: 0.75),
+      );
+    }
+
+    // ── Center hub ────────────────────────────────────────────────────────────
+
+    // Hub glow
+    canvas.drawCircle(
+      center,
+      hubR + 10,
+      Paint()
+        ..color = kAccent.withValues(alpha: 0.2)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10),
+    );
+
+    // Hub base
+    canvas.drawCircle(
+      center,
+      hubR,
+      Paint()
+        ..shader = RadialGradient(
+          center: const Alignment(-0.2, -0.3),
+          colors: [Colors.white, const Color(0xFFCCF5FF)],
+        ).createShader(Rect.fromCircle(center: center, radius: hubR)),
+    );
+
+    // Hub rim
+    canvas.drawCircle(
+      center,
+      hubR,
+      Paint()
+        ..color = kAccent
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5,
+    );
+
+    // Hub centre dot
+    canvas.drawCircle(center, hubR * 0.28, Paint()..color = kAccent);
   }
 
   @override

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:in_app_purchase/in_app_purchase.dart';
 import 'entitlement_service.dart';
 import 'iap_product_ids.dart';
@@ -22,7 +23,9 @@ class IAPService {
 
   /// Initialises the store connection and begins listening for purchase updates.
   /// Call once from main() after StorageService and EntitlementService are ready.
+  /// No-op on web and desktop platforms.
   static Future<void> init() async {
+    if (kIsWeb) return;
     final available = await _iap.isAvailable();
     if (!available) return;
 
@@ -37,6 +40,7 @@ class IAPService {
   /// Loads product details from the store for all registered product IDs.
   /// Returns an empty list if the store is unavailable or products aren't found.
   static Future<List<ProductDetails>> loadProducts() async {
+    if (kIsWeb) return [];
     final available = await _iap.isAvailable();
     if (!available) return [];
 

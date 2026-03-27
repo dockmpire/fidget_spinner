@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'constants.dart';
@@ -12,7 +13,8 @@ void main() async {
   // Initialize storage and entitlements
   await StorageService.init();
   await EntitlementService.init();
-  await IAPService.init();
+  // IAP only supported on iOS and Android
+  if (!kIsWeb) await IAPService.init();
   
   // Lock to portrait mode for better fidget experience
   await SystemChrome.setPreferredOrientations([

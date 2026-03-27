@@ -93,24 +93,45 @@ class _FidgetHomeScreenState extends State<FidgetHomeScreen> {
                 children: [
                   // Fidget display — long press to open toolbox
                   Expanded(
-                    child: Center(
-                      child: GestureDetector(
-                        onLongPress: _openToolbox,
-                        child: FidgetRegistry.all[_activeFidgetIndex].builder(
-                          FidgetCallbacks(
-                            onInteractionStart: () {},
-                            onInteractionEnd: _onSpinEnd,
-                            onHapticPulse: _onHapticPulse,
-                            sensitivity: _sensitivity,
-                            hapticIntensity: _hapticIntensity,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        // Ambient glow behind spinner
+                        Container(
+                          width: 260,
+                          height: 260,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: RadialGradient(
+                              colors: [
+                                kAccent.withValues(alpha: 0.08),
+                                kAccent.withValues(alpha: 0.0),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
+
+                        // Spinner
+                        GestureDetector(
+                          onLongPress: _openToolbox,
+                          child: FidgetRegistry.all[_activeFidgetIndex].builder(
+                            FidgetCallbacks(
+                              onInteractionStart: () {},
+                              onInteractionEnd: _onSpinEnd,
+                              onHapticPulse: _onHapticPulse,
+                              sensitivity: _sensitivity,
+                              hapticIntensity: _hapticIntensity,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
 
-                  // Hint label — fades once user has interacted
-                  const _LongPressHint(),
+                  // Active fidget name + hint
+                  _FidgetLabel(
+                    name: FidgetRegistry.all[_activeFidgetIndex].name,
+                  ),
                   const SizedBox(height: 16),
 
                   // Stats display
@@ -215,26 +236,45 @@ class _FidgetHomeScreenState extends State<FidgetHomeScreen> {
   }
 }
 
-/// Small hint that prompts the user to long-press to switch fidgets.
-class _LongPressHint extends StatelessWidget {
-  const _LongPressHint();
+/// Shows the active fidget name with a subtle long-press hint below it.
+class _FidgetLabel extends StatelessWidget {
+  final String name;
+  const _FidgetLabel({required this.name});
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Column(
         children: [
-          Icon(Icons.touch_app, size: 12, color: kTextMuted.withValues(alpha: 0.5)),
-          const SizedBox(width: 4),
           Text(
-            'Hold to switch fidget',
+            name.toUpperCase(),
             style: TextStyle(
               fontSize: 11,
-              color: kTextMuted.withValues(alpha: 0.5),
-              letterSpacing: 0.3,
+              fontWeight: FontWeight.w600,
+              color: kAccent.withValues(alpha: 0.7),
+              letterSpacing: 2.5,
             ),
+          ),
+          const SizedBox(height: 4),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.touch_app,
+                size: 11,
+                color: kTextMuted.withValues(alpha: 0.35),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                'Hold to switch',
+                style: TextStyle(
+                  fontSize: 10,
+                  color: kTextMuted.withValues(alpha: 0.35),
+                  letterSpacing: 0.3,
+                ),
+              ),
+            ],
           ),
         ],
       ),
