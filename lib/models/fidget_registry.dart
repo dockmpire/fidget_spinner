@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'fidget_definition.dart';
 import '../constants.dart';
+import '../services/iap_product_ids.dart';
 import '../widgets/spinner_fidget.dart';
 
 /// Central registry of all available fidget toys.
@@ -17,13 +18,14 @@ class FidgetRegistry {
       builder: (callbacks) => SpinnerFidget(callbacks: callbacks),
     ),
 
-    // Coming soon — add entries here as new toys are built:
+    // Coming soon — uncomment when widget is built:
     // FidgetDefinition(
     //   id: 'water_gun',
     //   name: 'Water Gun',
     //   icon: Icons.water_drop,
     //   accentColor: Color(0xFF00AAFF),
     //   isPremium: true,
+    //   productId: IAPProductIds.waterGun,
     //   price: 0.99,
     //   builder: (callbacks) => WaterGunFidget(callbacks: callbacks),
     // ),

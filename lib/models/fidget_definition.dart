@@ -23,7 +23,13 @@ class FidgetDefinition {
   final String id;
   final String name;
   final bool isPremium;
-  final double price; // 0.0 if free
+
+  /// App Store product ID — null for free fidgets.
+  final String? productId;
+
+  /// Display price (e.g. 0.99). Use ProductDetails.price for the localised string.
+  final double price;
+
   final IconData icon;
   final Color accentColor;
 
@@ -36,6 +42,7 @@ class FidgetDefinition {
     required this.icon,
     required this.builder,
     this.isPremium = false,
+    this.productId,
     this.price = 0.0,
     this.accentColor = kAccent,
   });
