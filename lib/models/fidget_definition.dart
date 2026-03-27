@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../constants.dart';
 
 /// Shared configuration and callbacks passed to every fidget widget.
 class FidgetCallbacks {
@@ -23,6 +24,8 @@ class FidgetDefinition {
   final String name;
   final bool isPremium;
   final double price; // 0.0 if free
+  final IconData icon;
+  final Color accentColor;
 
   /// Builds the fidget widget with the given callbacks.
   final Widget Function(FidgetCallbacks callbacks) builder;
@@ -30,8 +33,10 @@ class FidgetDefinition {
   const FidgetDefinition({
     required this.id,
     required this.name,
+    required this.icon,
     required this.builder,
     this.isPremium = false,
     this.price = 0.0,
+    this.accentColor = kAccent,
   });
 }

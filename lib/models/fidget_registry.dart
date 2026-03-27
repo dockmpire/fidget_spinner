@@ -1,4 +1,6 @@
+import 'package:flutter/material.dart';
 import 'fidget_definition.dart';
+import '../constants.dart';
 import '../widgets/spinner_fidget.dart';
 
 /// Central registry of all available fidget toys.
@@ -8,6 +10,8 @@ class FidgetRegistry {
     FidgetDefinition(
       id: 'spinner',
       name: 'Spinner',
+      icon: Icons.rotate_right,
+      accentColor: kAccent,
       isPremium: false,
       price: 0.0,
       builder: (callbacks) => SpinnerFidget(callbacks: callbacks),
@@ -17,6 +21,8 @@ class FidgetRegistry {
     // FidgetDefinition(
     //   id: 'water_gun',
     //   name: 'Water Gun',
+    //   icon: Icons.water_drop,
+    //   accentColor: Color(0xFF00AAFF),
     //   isPremium: true,
     //   price: 0.99,
     //   builder: (callbacks) => WaterGunFidget(callbacks: callbacks),

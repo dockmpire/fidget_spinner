@@ -3,6 +3,7 @@ import '../constants.dart';
 import '../models/fidget_definition.dart';
 import '../models/fidget_registry.dart';
 import '../services/storage_service.dart';
+import '../widgets/fidget_toolbox.dart';
 import '../widgets/stat_card.dart';
 import 'settings_screen.dart';
 
@@ -21,6 +22,7 @@ class _FidgetHomeScreenState extends State<FidgetHomeScreen> {
   double _sensitivity = 1.0;
   int _hapticIntensity = 3;
   int _activeFidgetIndex = 0;
+  bool _toolboxOpen = false;
 
   @override
   void initState() {
@@ -55,10 +57,20 @@ class _FidgetHomeScreenState extends State<FidgetHomeScreen> {
   }
 
   Future<void> _onHapticPulse() async {
-    int newTotal = _hapticPulses + 1;
+    final newTotal = _hapticPulses + 1;
     await StorageService.setTotalHapticPulses(newTotal);
     setState(() {
       _hapticPulses = newTotal;
+    });
+  }
+
+  void _openToolbox() => setState(() => _toolboxOpen = true);
+  void _closeToolbox() => setState(() => _toolboxOpen = false);
+
+  void _selectFidget(int index) {
+    setState(() {
+      _activeFidgetIndex = index;
+      _toolboxOpen = false;
     });
   }
 
@@ -69,25 +81,32 @@ class _FidgetHomeScreenState extends State<FidgetHomeScreen> {
       body: SafeArea(
         child: Stack(
           children: [
+            // Main content
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
               child: Column(
                 children: [
-                  // Fidget display
+                  // Fidget display — long press to open toolbox
                   Expanded(
                     child: Center(
-                      child: FidgetRegistry.all[_activeFidgetIndex].builder(
-                        FidgetCallbacks(
-                          onInteractionStart: () {},
-                          onInteractionEnd: _onSpinEnd,
-                          onHapticPulse: _onHapticPulse,
-                          sensitivity: _sensitivity,
-                          hapticIntensity: _hapticIntensity,
+                      child: GestureDetector(
+                        onLongPress: _openToolbox,
+                        child: FidgetRegistry.all[_activeFidgetIndex].builder(
+                          FidgetCallbacks(
+                            onInteractionStart: () {},
+                            onInteractionEnd: _onSpinEnd,
+                            onHapticPulse: _onHapticPulse,
+                            sensitivity: _sensitivity,
+                            hapticIntensity: _hapticIntensity,
+                          ),
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 24),
+
+                  // Hint label — fades once user has interacted
+                  const _LongPressHint(),
+                  const SizedBox(height: 16),
 
                   // Stats display
                   Row(
@@ -127,11 +146,7 @@ class _FidgetHomeScreenState extends State<FidgetHomeScreen> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(
-                          Icons.emoji_events,
-                          color: kAccent,
-                          size: 20,
-                        ),
+                        const Icon(Icons.emoji_events, color: kAccent, size: 20),
                         const SizedBox(width: 8),
                         Text(
                           'Best: ${_longestSpin}s',
@@ -154,10 +169,7 @@ class _FidgetHomeScreenState extends State<FidgetHomeScreen> {
               top: 16,
               right: 20,
               child: IconButton(
-                icon: const Icon(
-                  Icons.settings,
-                  color: kTextMuted,
-                ),
+                icon: const Icon(Icons.settings, color: kTextMuted),
                 onPressed: () async {
                   await Navigator.push(
                     context,
@@ -165,12 +177,47 @@ class _FidgetHomeScreenState extends State<FidgetHomeScreen> {
                       builder: (context) => const SettingsScreen(),
                     ),
                   );
-                  _loadStats(); // Reload settings when returning
+                  _loadStats();
                 },
               ),
             ),
+
+            // Fidget toolbox overlay
+            if (_toolboxOpen)
+              FidgetToolbox(
+                activeFidgetIndex: _activeFidgetIndex,
+                onSelect: _selectFidget,
+                onDismiss: _closeToolbox,
+              ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Small hint that prompts the user to long-press to switch fidgets.
+class _LongPressHint extends StatelessWidget {
+  const _LongPressHint();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.touch_app, size: 12, color: kTextMuted.withValues(alpha: 0.5)),
+          const SizedBox(width: 4),
+          Text(
+            'Hold to switch fidget',
+            style: TextStyle(
+              fontSize: 11,
+              color: kTextMuted.withValues(alpha: 0.5),
+              letterSpacing: 0.3,
+            ),
+          ),
+        ],
       ),
     );
   }
