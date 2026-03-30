@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'constants.dart';
 import 'services/entitlement_service.dart';
 import 'services/iap_service.dart';
+import 'services/sound_service.dart';
 import 'services/storage_service.dart';
 import 'screens/home_screen.dart';
 
@@ -13,8 +14,8 @@ void main() async {
   // Initialize storage and entitlements
   await StorageService.init();
   await EntitlementService.init();
-  // IAP only supported on iOS and Android
   if (!kIsWeb) await IAPService.init();
+  await SoundService.instance.init();
   
   // Lock to portrait mode for better fidget experience
   await SystemChrome.setPreferredOrientations([
