@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'dart:async';
 import 'dart:math';
 import '../models/fidget_definition.dart';
 
@@ -34,6 +35,9 @@ class _StressBallFidgetState extends State<StressBallFidget>
   double _lastHapticScaleX = 1.0;
   double _lastHapticScaleY = 1.0;
 
+  Timer? _holdTimer;
+  double _tapSqueeze = 1.0;
+
   @override
   void initState() {
     super.initState();
@@ -59,6 +63,36 @@ class _StressBallFidgetState extends State<StressBallFidget>
   }
 
   double _lerp(double a, double b, double t) => a + (b - a) * t;
+
+  void _onTapDown(TapDownDetails details) {
+    _releaseCtrl.stop();
+    setState(() => _tapSqueeze = 0.93);
+    widget.callbacks.onInteractionStart();
+    _triggerHaptic(light: false);
+    _holdTimer?.cancel();
+    _holdTimer = Timer.periodic(const Duration(milliseconds: 90), (_) {
+      _triggerHaptic(light: false);
+    });
+  }
+
+  void _onTapUp(TapUpDetails details) {
+    _holdTimer?.cancel();
+    _holdTimer = null;
+    _releaseScaleX = _tapSqueeze;
+    _releaseScaleY = _tapSqueeze;
+    _releaseDrift = Offset.zero;
+    setState(() => _tapSqueeze = 1.0);
+    _releaseCtrl.reset();
+    _releaseCtrl.forward();
+    widget.callbacks.onInteractionEnd(1);
+  }
+
+  void _onTapCancel() {
+    // Pan took over — let pan manage haptics from here
+    _holdTimer?.cancel();
+    _holdTimer = null;
+    setState(() => _tapSqueeze = 1.0);
+  }
 
   void _onPanStart(DragStartDetails details) {
     _releaseCtrl.stop();
@@ -110,6 +144,8 @@ class _StressBallFidgetState extends State<StressBallFidget>
   void _onPanEnd(DragEndDetails details) {
     if (!_isTouching) return;
     _isTouching = false;
+    _holdTimer?.cancel();
+    _holdTimer = null;
 
     _releaseScaleX = _scaleX;
     _releaseScaleY = _scaleY;
@@ -141,6 +177,7 @@ class _StressBallFidgetState extends State<StressBallFidget>
 
   @override
   void dispose() {
+    _holdTimer?.cancel();
     _releaseCtrl.dispose();
     super.dispose();
   }
@@ -152,6 +189,9 @@ class _StressBallFidgetState extends State<StressBallFidget>
       final ballRadius = size / 2;
 
       return GestureDetector(
+        onTapDown: _onTapDown,
+        onTapUp: _onTapUp,
+        onTapCancel: _onTapCancel,
         onPanStart: _onPanStart,
         onPanUpdate: (d) => _onPanUpdate(d, ballRadius),
         onPanEnd: _onPanEnd,
@@ -162,7 +202,8 @@ class _StressBallFidgetState extends State<StressBallFidget>
             offset: _driftOffset,
             child: Transform(
               alignment: Alignment.center,
-              transform: Matrix4.diagonal3Values(_scaleX, _scaleY, 1.0),
+              transform: Matrix4.diagonal3Values(
+                  _scaleX * _tapSqueeze, _scaleY * _tapSqueeze, 1.0),
               child: CustomPaint(
                 size: Size(size, size),
                 painter: const _StressBallPainter(),
