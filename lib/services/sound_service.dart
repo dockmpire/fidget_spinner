@@ -7,7 +7,7 @@ import 'package:audioplayers/audioplayers.dart';
 ///
 /// Required files (place in assets/sounds/ and uncomment the assets entry
 /// in pubspec.yaml, then run `flutter pub get`):
-///   • bubble_pop.mp3          — short pop (~0.1 s)
+///   • bubble_pop.mp3       — short pop (~0.1 s)
 ///   • stress_ball_squeeze.mp3 — soft rubbery squish (~0.1–0.2 s)
 ///   • stress_ball_release.mp3 — light bounce/snap (~0.1 s)
 class SoundService {
