@@ -91,6 +91,14 @@ class _FidgetHomeScreenState extends State<FidgetHomeScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
               child: Column(
                 children: [
+                  // Top tab switcher
+                  const SizedBox(height: 44),
+                  _FidgetTabBar(
+                    selectedIndex: _activeFidgetIndex,
+                    onSelect: (i) => setState(() => _activeFidgetIndex = i),
+                  ),
+                  const SizedBox(height: 12),
+
                   // Fidget display — long press to open toolbox
                   Expanded(
                     child: Stack(
@@ -127,12 +135,6 @@ class _FidgetHomeScreenState extends State<FidgetHomeScreen> {
                       ],
                     ),
                   ),
-
-                  // Active fidget name + hint
-                  _FidgetLabel(
-                    name: FidgetRegistry.all[_activeFidgetIndex].name,
-                  ),
-                  const SizedBox(height: 16),
 
                   // Stats display
                   Row(
@@ -231,6 +233,58 @@ class _FidgetHomeScreenState extends State<FidgetHomeScreen> {
               CornerMenu(onDismiss: _closeMenu),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Top tab bar for switching between fidget toys.
+class _FidgetTabBar extends StatelessWidget {
+  final int selectedIndex;
+  final Function(int) onSelect;
+
+  const _FidgetTabBar({required this.selectedIndex, required this.onSelect});
+
+  static const _activeColor = Color(0xFF7057C0);
+
+  @override
+  Widget build(BuildContext context) {
+    final fidgets = FidgetRegistry.all;
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: kSurface,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: List.generate(fidgets.length, (i) {
+          final isActive = i == selectedIndex;
+          return Expanded(
+            child: GestureDetector(
+              onTap: () => onSelect(i),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(vertical: 9),
+                decoration: isActive
+                    ? BoxDecoration(
+                        color: _activeColor,
+                        borderRadius: BorderRadius.circular(10),
+                      )
+                    : null,
+                child: Text(
+                  fidgets[i].name,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: isActive ? Colors.white : kTextMuted,
+                    fontWeight:
+                        isActive ? FontWeight.w600 : FontWeight.w400,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }),
       ),
     );
   }

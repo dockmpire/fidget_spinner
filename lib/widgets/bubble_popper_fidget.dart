@@ -13,16 +13,11 @@ class BubblePopperFidget extends StatefulWidget {
 
 class _BubblePopperFidgetState extends State<BubblePopperFidget>
     with TickerProviderStateMixin {
-  static const int _gridSize = 5;
-  static const int _total = _gridSize * _gridSize;
+  static const int _cols = 6;
+  static const int _rows = 8;
+  static const int _total = _cols * _rows; // 48
 
-  static const _bubbleColors = [
-    Color(0xFFE91E8C), // hot pink
-    Color(0xFFAB47BC), // purple
-    Color(0xFF5C6BC0), // indigo
-    Color(0xFF26C6DA), // cyan
-    Color(0xFF66BB6A), // green
-  ];
+  static const _bubbleColor = Color(0xFF5C6BC0); // indigo
 
   late List<bool> _popped;
   late List<AnimationController> _controllers;
@@ -35,16 +30,10 @@ class _BubblePopperFidgetState extends State<BubblePopperFidget>
     _controllers = List.generate(
       _total,
       (i) => AnimationController(
-        duration: const Duration(milliseconds: 160),
+        duration: const Duration(milliseconds: 150),
         vsync: this,
       ),
     );
-  }
-
-  Color _colorForIndex(int index) {
-    final row = index ~/ _gridSize;
-    final col = index % _gridSize;
-    return _bubbleColors[(row + col) % _bubbleColors.length];
   }
 
   void _popBubble(int index) {
@@ -99,57 +88,62 @@ class _BubblePopperFidgetState extends State<BubblePopperFidget>
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(builder: (context, constraints) {
-      final size = min(constraints.maxWidth, constraints.maxHeight) * 0.88;
-      return Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          color: const Color(0xFF1A0A1A),
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(
-            color: const Color(0xFFE91E8C).withValues(alpha: 0.35),
-            width: 2,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFFE91E8C).withValues(alpha: 0.18),
-              blurRadius: 24,
-              spreadRadius: 2,
+      const spacing = 6.0;
+      const padding = 12.0;
+
+      // Compute the largest square cell that fits _cols columns and _rows rows
+      final cellW = (constraints.maxWidth - 2 * padding - (_cols - 1) * spacing) / _cols;
+      final cellH = (constraints.maxHeight - 2 * padding - (_rows - 1) * spacing) / _rows;
+      final cell = min(cellW, cellH);
+
+      final gridW = _cols * cell + (_cols - 1) * spacing + 2 * padding;
+      final gridH = _rows * cell + (_rows - 1) * spacing + 2 * padding;
+
+      return Center(
+        child: Container(
+          width: gridW,
+          height: gridH,
+          decoration: BoxDecoration(
+            color: const Color(0xFF12122A),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: _bubbleColor.withValues(alpha: 0.25),
+              width: 1.5,
             ),
-          ],
-        ),
-        padding: EdgeInsets.all(size * 0.035),
-        child: GridView.builder(
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: _gridSize,
-            mainAxisSpacing: 6,
-            crossAxisSpacing: 6,
           ),
-          itemCount: _total,
-          itemBuilder: (context, index) {
-            final color = _colorForIndex(index);
-            return AnimatedBuilder(
-              animation: _controllers[index],
-              builder: (context, _) {
-                final progress = _controllers[index].value;
-                final isPopped = _popped[index];
-                return GestureDetector(
-                  onTapDown: (_) => _popBubble(index),
-                  child: isPopped && progress >= 1.0
-                      ? CustomPaint(
-                          painter: _PoppedBubblePainter(color: color),
-                        )
-                      : Transform.scale(
-                          scale: isPopped ? (1.0 - progress) : 1.0,
-                          child: CustomPaint(
-                            painter: _DomeBubblePainter(color: color),
+          padding: const EdgeInsets.all(padding),
+          child: GridView.builder(
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: _cols,
+              mainAxisSpacing: spacing,
+              crossAxisSpacing: spacing,
+              childAspectRatio: 1.0,
+            ),
+            itemCount: _total,
+            itemBuilder: (context, index) {
+              return AnimatedBuilder(
+                animation: _controllers[index],
+                builder: (context, _) {
+                  final progress = _controllers[index].value;
+                  final isPopped = _popped[index];
+                  return GestureDetector(
+                    onTapDown: (_) => _popBubble(index),
+                    child: isPopped && progress >= 1.0
+                        ? CustomPaint(
+                            painter: _PoppedBubblePainter(color: _bubbleColor),
+                          )
+                        : Transform.scale(
+                            scale: isPopped ? (1.0 - progress) : 1.0,
+                            child: CustomPaint(
+                              painter: _DomeBubblePainter(color: _bubbleColor),
+                            ),
                           ),
-                        ),
-                );
-              },
-            );
-          },
+                  );
+                },
+              );
+            },
+          ),
         ),
       );
     });
@@ -165,44 +159,44 @@ class _DomeBubblePainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final r = min(size.width, size.height) / 2 * 0.88;
 
-    // Soft drop shadow
+    // Drop shadow
     canvas.drawCircle(
       center + Offset(0, r * 0.12),
       r,
       Paint()
-        ..color = Colors.black.withValues(alpha: 0.45)
-        ..maskFilter = MaskFilter.blur(BlurStyle.normal, r * 0.25),
+        ..color = Colors.black.withValues(alpha: 0.5)
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, r * 0.22),
     );
 
     // Base dome
     canvas.drawCircle(center, r, Paint()..color = color);
 
-    // Radial sheen (3D dome illusion)
+    // Radial sheen
     canvas.drawCircle(
       center,
       r,
       Paint()
         ..shader = RadialGradient(
           center: const Alignment(-0.28, -0.38),
-          radius: 0.88,
+          radius: 0.85,
           colors: [
-            Colors.white.withValues(alpha: 0.52),
+            Colors.white.withValues(alpha: 0.48),
             color.withValues(alpha: 0.0),
           ],
         ).createShader(Rect.fromCircle(center: center, radius: r)),
     );
 
-    // Bottom rim darkening for depth
+    // Bottom rim darkening
     canvas.drawCircle(
       center,
       r,
       Paint()
         ..shader = RadialGradient(
-          center: const Alignment(0.3, 0.45),
-          radius: 0.75,
+          center: const Alignment(0.3, 0.5),
+          radius: 0.7,
           colors: [
             Colors.black.withValues(alpha: 0.0),
-            Colors.black.withValues(alpha: 0.28),
+            Colors.black.withValues(alpha: 0.30),
           ],
         ).createShader(Rect.fromCircle(center: center, radius: r)),
     );
@@ -210,15 +204,15 @@ class _DomeBubblePainter extends CustomPainter {
     // Primary highlight
     canvas.drawCircle(
       center + Offset(-r * 0.26, -r * 0.28),
-      r * 0.2,
-      Paint()..color = Colors.white.withValues(alpha: 0.62),
+      r * 0.22,
+      Paint()..color = Colors.white.withValues(alpha: 0.58),
     );
 
-    // Tiny specular glint
+    // Specular glint
     canvas.drawCircle(
-      center + Offset(-r * 0.18, -r * 0.34),
-      r * 0.07,
-      Paint()..color = Colors.white.withValues(alpha: 0.9),
+      center + Offset(-r * 0.18, -r * 0.35),
+      r * 0.08,
+      Paint()..color = Colors.white.withValues(alpha: 0.88),
     );
   }
 
@@ -235,28 +229,28 @@ class _PoppedBubblePainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final r = min(size.width, size.height) / 2 * 0.88;
 
-    // Flat sunken disc
-    canvas.drawCircle(center, r, Paint()..color = color.withValues(alpha: 0.18));
+    // Sunken flat disc
+    canvas.drawCircle(center, r, Paint()..color = color.withValues(alpha: 0.15));
 
     // Concave ring shadow
     canvas.drawCircle(
       center,
-      r * 0.85,
+      r * 0.82,
       Paint()
-        ..color = Colors.black.withValues(alpha: 0.35)
+        ..color = Colors.black.withValues(alpha: 0.40)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = r * 0.16
-        ..maskFilter = MaskFilter.blur(BlurStyle.normal, r * 0.08),
+        ..strokeWidth = r * 0.18
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, r * 0.07),
     );
 
-    // Inner indent circle
+    // Inner indent ring
     canvas.drawCircle(
       center,
-      r * 0.5,
+      r * 0.45,
       Paint()
-        ..color = color.withValues(alpha: 0.10)
+        ..color = color.withValues(alpha: 0.12)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5,
+        ..strokeWidth = 1.2,
     );
   }
 

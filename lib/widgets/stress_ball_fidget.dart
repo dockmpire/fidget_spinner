@@ -13,15 +13,13 @@ class StressBallFidget extends StatefulWidget {
 
 class _StressBallFidgetState extends State<StressBallFidget>
     with SingleTickerProviderStateMixin {
-  static const _ballColor = Color(0xFF7ED348);
-  static const _maxStretch = 0.46;
-  static const _minScale = 0.62;
+  static const _maxStretch = 0.42;
+  static const _minScale = 0.65;
 
   double _scaleX = 1.0;
   double _scaleY = 1.0;
   Offset _driftOffset = Offset.zero;
 
-  // Values at the moment the finger lifts (used by release animation)
   double _releaseScaleX = 1.0;
   double _releaseScaleY = 1.0;
   Offset _releaseDrift = Offset.zero;
@@ -33,7 +31,6 @@ class _StressBallFidgetState extends State<StressBallFidget>
   Offset _dragStart = Offset.zero;
   int _touchStartMs = 0;
 
-  // Haptic gating
   double _lastHapticScaleX = 1.0;
   double _lastHapticScaleY = 1.0;
 
@@ -56,7 +53,8 @@ class _StressBallFidgetState extends State<StressBallFidget>
     setState(() {
       _scaleX = _lerp(_releaseScaleX, 1.0, t);
       _scaleY = _lerp(_releaseScaleY, 1.0, t);
-      _driftOffset = Offset.lerp(_releaseDrift, Offset.zero, t.clamp(0.0, 1.0))!;
+      _driftOffset =
+          Offset.lerp(_releaseDrift, Offset.zero, t.clamp(0.0, 1.0))!;
     });
   }
 
@@ -78,23 +76,22 @@ class _StressBallFidgetState extends State<StressBallFidget>
 
     final delta = details.localPosition - _dragStart;
     final dist = delta.distance;
-
-    // Normalise against ball radius so the feel is size-independent
-    final t = (dist / (ballRadius * 1.2)).clamp(0.0, 1.0);
+    final t = (dist / (ballRadius * 1.1)).clamp(0.0, 1.0);
     final angle = atan2(delta.dy, delta.dx);
 
     final cosA = cos(angle).abs();
     final sinA = sin(angle).abs();
 
-    // Primary axis stretches; perpendicular axis squishes (volume conservation feel)
-    final newScaleX = (1.0 + _maxStretch * t * cosA - _maxStretch * 0.55 * t * sinA)
-        .clamp(_minScale, 1.0 + _maxStretch);
-    final newScaleY = (1.0 + _maxStretch * t * sinA - _maxStretch * 0.55 * t * cosA)
-        .clamp(_minScale, 1.0 + _maxStretch);
+    final newScaleX =
+        (1.0 + _maxStretch * t * cosA - _maxStretch * 0.5 * t * sinA)
+            .clamp(_minScale, 1.0 + _maxStretch);
+    final newScaleY =
+        (1.0 + _maxStretch * t * sinA - _maxStretch * 0.5 * t * cosA)
+            .clamp(_minScale, 1.0 + _maxStretch);
 
-    // Slight drift in the drag direction so the ball "follows" the finger
-    final driftMag = (dist * 0.18).clamp(0.0, ballRadius * 0.22);
-    final newDrift = Offset(cos(angle) * driftMag, sin(angle) * driftMag);
+    final driftMag = (dist * 0.16).clamp(0.0, ballRadius * 0.2);
+    final newDrift =
+        Offset(cos(angle) * driftMag, sin(angle) * driftMag);
 
     setState(() {
       _scaleX = newScaleX;
@@ -102,7 +99,6 @@ class _StressBallFidgetState extends State<StressBallFidget>
       _driftOffset = newDrift;
     });
 
-    // Haptic when deformation crosses a meaningful threshold
     if ((_scaleX - _lastHapticScaleX).abs() > 0.07 ||
         (_scaleY - _lastHapticScaleY).abs() > 0.07) {
       _triggerHaptic(light: false);
@@ -123,7 +119,8 @@ class _StressBallFidgetState extends State<StressBallFidget>
     _releaseCtrl.forward();
     _triggerHaptic(light: true);
 
-    final dur = max(1, (DateTime.now().millisecondsSinceEpoch - _touchStartMs) ~/ 1000);
+    final dur = max(
+        1, (DateTime.now().millisecondsSinceEpoch - _touchStartMs) ~/ 1000);
     widget.callbacks.onInteractionEnd(dur);
     _lastHapticScaleX = 1.0;
     _lastHapticScaleY = 1.0;
@@ -151,7 +148,7 @@ class _StressBallFidgetState extends State<StressBallFidget>
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(builder: (context, constraints) {
-      final size = min(constraints.maxWidth, constraints.maxHeight) * 0.72;
+      final size = min(constraints.maxWidth, constraints.maxHeight) * 0.78;
       final ballRadius = size / 2;
 
       return GestureDetector(
@@ -168,7 +165,7 @@ class _StressBallFidgetState extends State<StressBallFidget>
               transform: Matrix4.diagonal3Values(_scaleX, _scaleY, 1.0),
               child: CustomPaint(
                 size: Size(size, size),
-                painter: _StressBallPainter(color: _ballColor),
+                painter: const _StressBallPainter(),
               ),
             ),
           ),
@@ -179,112 +176,121 @@ class _StressBallFidgetState extends State<StressBallFidget>
 }
 
 class _StressBallPainter extends CustomPainter {
-  final Color color;
-  const _StressBallPainter({required this.color});
+  const _StressBallPainter();
+
+  static const _outerColor = Color(0xFF4DD0E1); // bright teal
+  static const _innerColor = Color(0xFF00838F); // dark teal
 
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
     final r = min(size.width, size.height) / 2;
+    final innerR = r * 0.62;
 
-    // Ambient shadow underneath
+    // Ground shadow
     canvas.drawOval(
       Rect.fromCenter(
-        center: center + Offset(0, r * 0.82),
-        width: r * 1.5,
-        height: r * 0.28,
+        center: center + Offset(0, r * 0.88),
+        width: r * 1.4,
+        height: r * 0.22,
       ),
       Paint()
-        ..color = Colors.black.withValues(alpha: 0.35)
-        ..maskFilter = MaskFilter.blur(BlurStyle.normal, r * 0.18),
-    );
-
-    // Drop shadow on ball
-    canvas.drawCircle(
-      center + Offset(r * 0.05, r * 0.08),
-      r * 0.96,
-      Paint()
-        ..color = Colors.black.withValues(alpha: 0.38)
+        ..color = Colors.black.withValues(alpha: 0.28)
         ..maskFilter = MaskFilter.blur(BlurStyle.normal, r * 0.14),
     );
 
-    // Base ball
-    canvas.drawCircle(center, r, Paint()..color = color);
-
-    // Subsurface scattering simulation — warm inner glow
+    // Ball drop shadow
     canvas.drawCircle(
-      center,
-      r,
+      center + Offset(r * 0.04, r * 0.07),
+      r * 0.97,
       Paint()
-        ..shader = RadialGradient(
-          center: const Alignment(0.1, 0.15),
-          radius: 0.7,
-          colors: [
-            const Color(0xFFCBFF99).withValues(alpha: 0.45),
-            color.withValues(alpha: 0.0),
-          ],
-        ).createShader(Rect.fromCircle(center: center, radius: r)),
+        ..color = Colors.black.withValues(alpha: 0.38)
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, r * 0.12),
     );
 
-    // Top-left light sheen
+    // Outer ring — bright teal base
+    canvas.drawCircle(center, r, Paint()..color = _outerColor);
+
+    // Outer ring — upper-left sheen
     canvas.drawCircle(
       center,
       r,
       Paint()
         ..shader = RadialGradient(
-          center: const Alignment(-0.32, -0.40),
-          radius: 0.82,
+          center: const Alignment(-0.32, -0.55),
+          radius: 0.78,
           colors: [
-            Colors.white.withValues(alpha: 0.38),
+            Colors.white.withValues(alpha: 0.45),
             Colors.transparent,
           ],
         ).createShader(Rect.fromCircle(center: center, radius: r)),
     );
 
-    // Texture bumps (simulate the grainy rubber surface)
-    final rng = Random(7);
-    final bumpPaint = Paint()..color = Colors.white.withValues(alpha: 0.06);
-    for (int i = 0; i < 28; i++) {
-      final a = rng.nextDouble() * 2 * pi;
-      final d = rng.nextDouble() * r * 0.72;
-      canvas.drawCircle(
-        center + Offset(cos(a) * d, sin(a) * d),
-        r * 0.038,
-        bumpPaint,
-      );
-    }
-
-    // Edge darkening (gives roundness / depth)
+    // Outer ring — bottom darkening for depth
     canvas.drawCircle(
       center,
       r,
+      Paint()
+        ..shader = RadialGradient(
+          center: const Alignment(0.25, 0.5),
+          radius: 0.8,
+          colors: [
+            Colors.transparent,
+            Colors.black.withValues(alpha: 0.22),
+          ],
+          stops: const [0.5, 1.0],
+        ).createShader(Rect.fromCircle(center: center, radius: r)),
+    );
+
+    // Inner circle — dark teal
+    canvas.drawCircle(center, innerR, Paint()..color = _innerColor);
+
+    // Inner circle — subtle gradient
+    canvas.drawCircle(
+      center,
+      innerR,
+      Paint()
+        ..shader = RadialGradient(
+          center: const Alignment(-0.2, -0.3),
+          radius: 0.88,
+          colors: [
+            Colors.white.withValues(alpha: 0.14),
+            Colors.transparent,
+          ],
+        ).createShader(Rect.fromCircle(center: center, radius: innerR)),
+    );
+
+    // Inner circle — edge darkening
+    canvas.drawCircle(
+      center,
+      innerR,
       Paint()
         ..shader = RadialGradient(
           center: Alignment.center,
           radius: 1.0,
           colors: [
             Colors.transparent,
-            Colors.black.withValues(alpha: 0.32),
+            Colors.black.withValues(alpha: 0.28),
           ],
-          stops: const [0.62, 1.0],
-        ).createShader(Rect.fromCircle(center: center, radius: r)),
+          stops: const [0.6, 1.0],
+        ).createShader(Rect.fromCircle(center: center, radius: innerR)),
     );
 
-    // Primary highlight blob
+    // Outer ring specular — large soft blob
     canvas.drawCircle(
-      center + Offset(-r * 0.27, -r * 0.27),
-      r * 0.22,
-      Paint()..color = Colors.white.withValues(alpha: 0.58),
+      center + Offset(-r * 0.30, -r * 0.50),
+      r * 0.20,
+      Paint()..color = Colors.white.withValues(alpha: 0.55),
     );
 
-    // Bright specular glint
+    // Outer ring specular — bright glint
     canvas.drawCircle(
-      center + Offset(-r * 0.20, -r * 0.35),
+      center + Offset(-r * 0.22, -r * 0.57),
       r * 0.08,
-      Paint()..color = Colors.white.withValues(alpha: 0.88),
+      Paint()..color = Colors.white.withValues(alpha: 0.90),
     );
   }
 
   @override
-  bool shouldRepaint(_StressBallPainter old) => old.color != color;
+  bool shouldRepaint(_StressBallPainter old) => false;
 }
