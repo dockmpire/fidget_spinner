@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:math';
 import '../models/fidget_definition.dart';
+import '../services/sound_service.dart';
 
 class BubblePopperFidget extends StatefulWidget {
   final FidgetCallbacks callbacks;
@@ -46,6 +47,7 @@ class _BubblePopperFidgetState extends State<BubblePopperFidget>
 
     setState(() => _popped[index] = true);
     _controllers[index].forward();
+    SoundService.instance.playBubblePop();
     _triggerHaptic();
 
     if (_popped.every((p) => p)) {

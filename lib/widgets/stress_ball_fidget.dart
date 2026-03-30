@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'dart:async';
 import 'dart:math';
 import '../models/fidget_definition.dart';
+import '../services/sound_service.dart';
 
 class StressBallFidget extends StatefulWidget {
   final FidgetCallbacks callbacks;
@@ -69,6 +70,7 @@ class _StressBallFidgetState extends State<StressBallFidget>
     setState(() => _tapSqueeze = 0.93);
     widget.callbacks.onInteractionStart();
     _triggerHaptic(light: false);
+    SoundService.instance.playStressBallSqueeze();
     _holdTimer?.cancel();
     _holdTimer = Timer.periodic(const Duration(milliseconds: 90), (_) {
       _triggerHaptic(light: false);
@@ -82,6 +84,7 @@ class _StressBallFidgetState extends State<StressBallFidget>
     _releaseScaleY = _tapSqueeze;
     _releaseDrift = Offset.zero;
     setState(() => _tapSqueeze = 1.0);
+    SoundService.instance.playStressBallRelease();
     _releaseCtrl.reset();
     _releaseCtrl.forward();
     widget.callbacks.onInteractionEnd(1);
@@ -103,6 +106,7 @@ class _StressBallFidgetState extends State<StressBallFidget>
     _lastHapticScaleX = 1.0;
     _lastHapticScaleY = 1.0;
     _triggerHaptic(light: true);
+    SoundService.instance.playStressBallSqueeze();
   }
 
   void _onPanUpdate(DragUpdateDetails details, double ballRadius) {
@@ -154,6 +158,7 @@ class _StressBallFidgetState extends State<StressBallFidget>
     _releaseCtrl.reset();
     _releaseCtrl.forward();
     _triggerHaptic(light: true);
+    SoundService.instance.playStressBallRelease();
 
     final dur = max(
         1, (DateTime.now().millisecondsSinceEpoch - _touchStartMs) ~/ 1000);
